@@ -34,6 +34,7 @@ fit_lm <- lm(Solubility~., data = train_data)
 pred_lm <- predict(fit_lm, test_data)
 mse(test_data$Solubility, pred_lm)
 ```
+# Ridge Regression 
 
 ```{r}
 x <- model.matrix(Solubility~.,test_data)[,-1]
@@ -51,55 +52,40 @@ set.seed(2)
 ridge.fit <- train(x, y,
                    method = "glmnet",
                    tuneGrid = expand.grid(alpha = 0, 
-                                          lambda = exp(seq(-1, 10, length = 100))),
+                                          lambda = exp(seq(-10, 10, length = 200))),
                    # preProc = c("center", "scale"),
                    trControl = ctrl1)
 
 plot(ridge.fit, xTrans = function(x) log(x))
-
-ridge.fit$bestTune
-
-coef(ridge.fit$finalModel,ridge.fit$bestTune$lambda)
 ```
+```{r}
+ridge.fit$bestTune
+best_lambda <- ridge.fit$bestTune$lambda
+best_lambda
+```
+
+
+#Lasso 
 
 ```{r}
 set.seed(2)
 lasso.fit <- train(x, y,
                    method = "glmnet",
                    tuneGrid = expand.grid(alpha = 1, 
-                                          lambda = exp(seq(-1, 5, length = 100))),
+                                          lambda = exp(seq(-10, 10, length = 200))),
                    # preProc = c("center", "scale"),
                    trControl = ctrl1)
+
 plot(lasso.fit, xTrans = function(x) log(x))
-
-lasso.fit$bestTune
-
-coef(lasso.fit$finalModel,lasso.fit$bestTune$lambda)
 ```
+
 
 ```{r}
-set.seed(2)
-enet.fit <- train(x, y,
-                  method = "glmnet",
-                  tuneGrid = expand.grid(alpha = seq(0, 1, length = 5), 
-                                         lambda = exp(seq(-2, 4, length = 50))),
-                  # preProc = c("center", "scale"),
-                  trControl = ctrl1)
-enet.fit$bestTune
-
-ggplot(enet.fit, highlight = TRUE)
+lasso.fit$bestTune
+best_lambda_lasso <- lasso.fit$bestTune$lambda
+best_lambda_lasso
 ```
 
 
-```{r, fig.width=5}
-set.seed(2)
-lm.fit <- train(x, y,
-                method = "lm",
-                trControl = ctrl1)
 
-resamp <- resamples(list(enet = enet.fit, lasso = lasso.fit, ridge = ridge.fit, lm = lm.fit))
-summary(resamp)
 
-parallelplot(resamp, metric = "RMSE")
-bwplot(resamp, metric = "RMSE")
-```
