@@ -14,6 +14,8 @@ knitr::opts_chunk$set(message = F)
 ```{r}
 library(tidyverse)
 library(caret)
+library(ModelMetrics)
+library(glmnet)
 ```
 
 # Reading the Datasets 
@@ -23,6 +25,50 @@ train_data = read_csv(file = "./data/solubility_train.csv")
 test_data = read_csv(file = "./data/solubility_test.csv")
 ```
 
+We will predict solubility of compounds using their chemical structures.The  training  data  are  in  the  file  “solubilitytrain.csv”  and  the  test  data  are  in  “solubil-itytest.csv”.  Among the 228 predictors, 208 are binary variables that indicate the presenceor absence of a particular chemical substructure, 16 are count features, such as the numberof bonds or the number of bromine atoms, and 4 are continuous features, such as molecularweight or surface area.  The response is in the column “Solubility”.
 
+# Linear Model
 
+```{r}
+fit_lm <- lm(Solubility~., data = train_data)
+pred_lm <- predict(fit_lm, test_data)
+mse(test_data$Solubility, pred_lm)
+```
+
+```{r}
+x <- model.matrix(Solubility~.,test_data)[,-1]
+# vector of response
+y <- test_data$Solubility
+ridge.mod <- glmnet(x,y, standardize = TRUE,
+                    alpha = 0, 
+                    lambda = exp(seq(-1, 10, length = 100)))
+```
+
+```{r}
+mat.coef <- coef(ridge.mod)
+dim(mat.coef)
+```
+
+```{r}
+set.seed(2)
+cv.ridge <- cv.glmnet(x, y, type.measure = "mse",
+                      alpha = 0, 
+                      lambda = exp(seq(-1, 10, length = 100)))
+
+plot(cv.ridge)
+```
+```{r}
+best.lambda <- cv.ridge$lambda.min
+best.lambda
+```
+
+```{r}
+best.lambda <- cv.ridge$lambda.min
+best.lambda
+cv.ridge
+predict(ridge.mod, s = best.lambda, type="coefficients")
+# predict(cv.ridge, s = best.lambda, type="coefficients") 
+# predict(cv.ridge, s = "lambda.min", type="coefficients") 
+# predict(cv.ridge, s = "lambda.1se", type="coefficients") 
+```
 
