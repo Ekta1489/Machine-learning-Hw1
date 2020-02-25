@@ -45,30 +45,61 @@ ridge.mod <- glmnet(x,y, standardize = TRUE,
 ```
 
 ```{r}
-mat.coef <- coef(ridge.mod)
-dim(mat.coef)
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+
+set.seed(2)
+ridge.fit <- train(x, y,
+                   method = "glmnet",
+                   tuneGrid = expand.grid(alpha = 0, 
+                                          lambda = exp(seq(-1, 10, length = 100))),
+                   # preProc = c("center", "scale"),
+                   trControl = ctrl1)
+
+plot(ridge.fit, xTrans = function(x) log(x))
+
+ridge.fit$bestTune
+
+coef(ridge.fit$finalModel,ridge.fit$bestTune$lambda)
 ```
 
 ```{r}
 set.seed(2)
-cv.ridge <- cv.glmnet(x, y, type.measure = "mse",
-                      alpha = 0, 
-                      lambda = exp(seq(-1, 10, length = 100)))
+lasso.fit <- train(x, y,
+                   method = "glmnet",
+                   tuneGrid = expand.grid(alpha = 1, 
+                                          lambda = exp(seq(-1, 5, length = 100))),
+                   # preProc = c("center", "scale"),
+                   trControl = ctrl1)
+plot(lasso.fit, xTrans = function(x) log(x))
 
-plot(cv.ridge)
+lasso.fit$bestTune
+
+coef(lasso.fit$finalModel,lasso.fit$bestTune$lambda)
 ```
+
 ```{r}
-best.lambda <- cv.ridge$lambda.min
-best.lambda
+set.seed(2)
+enet.fit <- train(x, y,
+                  method = "glmnet",
+                  tuneGrid = expand.grid(alpha = seq(0, 1, length = 5), 
+                                         lambda = exp(seq(-2, 4, length = 50))),
+                  # preProc = c("center", "scale"),
+                  trControl = ctrl1)
+enet.fit$bestTune
+
+ggplot(enet.fit, highlight = TRUE)
 ```
 
-```{r}
-best.lambda <- cv.ridge$lambda.min
-best.lambda
-cv.ridge
-predict(ridge.mod, s = best.lambda, type="coefficients")
-# predict(cv.ridge, s = best.lambda, type="coefficients") 
-# predict(cv.ridge, s = "lambda.min", type="coefficients") 
-# predict(cv.ridge, s = "lambda.1se", type="coefficients") 
-```
 
+```{r, fig.width=5}
+set.seed(2)
+lm.fit <- train(x, y,
+                method = "lm",
+                trControl = ctrl1)
+
+resamp <- resamples(list(enet = enet.fit, lasso = lasso.fit, ridge = ridge.fit, lm = lm.fit))
+summary(resamp)
+
+parallelplot(resamp, metric = "RMSE")
+bwplot(resamp, metric = "RMSE")
+```
