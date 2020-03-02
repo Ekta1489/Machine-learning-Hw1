@@ -18,27 +18,28 @@ library(ModelMetrics)
 library(glmnet)
 ```
 
-# Reading the Datasets 
+Reading the Datasets 
 
 ```{r}
 train_data = read_csv(file = "./data/solubility_train.csv")
 test_data = read_csv(file = "./data/solubility_test.csv")
 ```
 
-We will predict solubility of compounds using their chemical structures.The  training  data  are  in  the  file  “solubilitytrain.csv”  and  the  test  data  are  in  “solubil-itytest.csv”.  Among the 228 predictors, 208 are binary variables that indicate the presenceor absence of a particular chemical substructure, 16 are count features, such as the numberof bonds or the number of bromine atoms, and 4 are continuous features, such as molecularweight or surface area.  The response is in the column “Solubility”.
+We will predict solubility of compounds using their chemical structures.The  training  data  are  in  the  file  “solubilitytrain.csv”  and  the  test  data  are  in  “solubilitytest.csv”.  Among the 228 predictors, 208 are binary variables that indicate the presenceor absence of a particular chemical substructure, 16 are count features, such as the numberof bonds or the number of bromine atoms, and 4 are continuous features, such as molecularweight or surface area.  The response is in the column “Solubility”.
 
 ```{r}
 #Training data
 x_train = model.matrix(Solubility ~ ., train_data)[,-1]
 y_train = train_data$Solubility
-#Tese data
+#Test data
 x_test = model.matrix(Solubility ~ ., test_data)[,-1]
 y_test = test_data$Solubility
 
 # Validation control
 ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
 ```
-# a) Fit a linear model using least squares on the training data and calculate the mean square error using the test data.
+
+a) Fit a linear model using least squares on the training data and calculate the mean square error using the test data.
 
 ```{r}
 set.seed(2)
@@ -46,12 +47,13 @@ lm.fit <- train(x_train, y_train,
                 method = "lm",
                 trControl = ctrl1)
 pred.lm <- predict(lm.fit$finalModel, newdata = data.frame(x_test))
-mean((pred.lm - y_test)^2)
+mse(y_test,pred.lm)
 
 ```
-The test mean square error is 0.5558898.
 
-# b) Fit a ridge regression model on the training data, with λ chosen by cross-validation.Report the test error.
+◆ The test mean square error is 0.5558898.
+
+b) Fit a ridge regression model on the training data, with λ chosen by cross-validation.Report the test error.
 
 ```{r}
 set.seed(2)
@@ -73,12 +75,12 @@ best_lambda
 ```{r}
 ridge.pred = predict(ridge.fit$finalModel, s = best_lambda, newx = x_test) 
 #Using best lambda to predict test data
-mean((ridge.pred - y_test)^2)
+mse(y_test, ridge.pred)
 ```
 
-The test error is 0.5134603.
+◆ The test error is 0.5134603.
 
-# c) Fit a lasso model on the training data, with λ chosen by cross-validation.  Report the test error, along with the number of non-zero coefficient estimates.
+c) Fit a lasso model on the training data, with λ chosen by cross-validation.  Report the test error, along with the number of non-zero coefficient estimates.
 
 ```{r}
 set.seed(2)
@@ -101,43 +103,45 @@ best_lambda_lasso
 ```{r}
 lasso.pred = predict(lasso.fit$finalModel, s = best_lambda_lasso, newx = x_test) 
 #Using best lambda to predict test data
-mean((lasso.pred - y_test)^2)
+mse(y_test, lasso.pred)
 ```
-The test error is 0.4987
+◆ The test error is 0.4987333
 
 ```{r}
 lasso.coef <- coef(lasso.fit$finalModel,lasso.fit$bestTune$lambda)
 length(lasso.coef)
 length(lasso.coef[lasso.coef != 0])
 ```
-There are 144 non-zero coefficient estimates.
+◆ There are 144 non-zero coefficient estimates.
 
-# d) Fit a principle component regression model on the training data, with M chosen by cross-validation. Report the test error, along with the value of M selected by cross-validation.
+d) Fit a principle component regression model on the training data, with M chosen by cross-validation. Report the test error, along with the value of M selected by cross-validation.
 
 ```{r}
 set.seed(2)
 pcr.fit <- train(x_train, y_train,
                   method = "pcr",
-                  tuneLength = 150,
+                  tuneLength = 149,
                   trControl = ctrl1,
                   scale = TRUE)
 
 predy.pcr <- predict(pcr.fit$finalModel, newdata = x_test, 
                        ncomp = pcr.fit$bestTune$ncomp)
-mean((predy.pcr - y_test)^2)
+mse(y_test, predy.pcr)
 ggplot(pcr.fit, highlight = TRUE) + theme_bw()
 ```
-The test error is 0.5483713.
+◆ The test error is 0.540555
+◆ The value of M selected by cross validation is 149.
 
-# e) Briefly discuss the results obtained in (a)∼(d).
+e) Briefly discuss the results obtained in (a)∼(d).
 
 ```{r}
 resamp <- resamples(list(lasso = lasso.fit, ridge = ridge.fit, pcr = pcr.fit, lm = lm.fit))
 summary(resamp)
 bwplot(resamp, metric = "RMSE")
 ```
-As we can see from the graph, the minimum RMSE is for Lasso followed by Ridge and Linear model. The PCR has the maximum RMSE. 
 
-# f) Which model will you choose for predicting solubility?
+As we can see from the graph, the minimum RMSE is for Lasso followed by Ridge model. The Linear model and the PCR has the maximum RMSE. 
+
+f) Which model will you choose for predicting solubility?
 
 Since, the RMSE is the lowest for Lasso, we should choose the Lasso model to predict solubility. 
