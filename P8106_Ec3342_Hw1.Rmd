@@ -2,7 +2,7 @@
 title: "Data Science 2,Hw1"
 author: "Ekta Chaudhary"
 date: "24/02/2020"
-output: github_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
